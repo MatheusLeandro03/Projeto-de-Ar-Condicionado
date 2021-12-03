@@ -1,1 +1,263 @@
+#include <IRremote.h> 
+// Declaração de biblioteca para modo Tap the Remote Control //
+ 
+/* Pino(s)- Estado Ar-Condicionado */
+#define pinLedEstadoArCondicionado 4 
+#define pinButtonEstadoArCondicionado 5 
 
+// #define pinEstadoArCondicionado 12
+#define pinPiezo 13 
+
+/* Pino(s)- tap the remote control */
+#define pinIRsensor 6
+
+/* Pino(s)- tap the device */
+#define pinButtonDiminuir 3 
+#define pinButtonAumentar 2 
+
+/* Pino(s)- Sincronização Bluetooth */
+#define pinButtonBluetooth 8 
+#define pinLedProntoParaSincronizar 7 
+
+/* Pino(s)- Temperatura do Ar-Condicionado pelo LED RGB */
+#define pinRedRGB 9 
+#define pinBlueRGB 10  
+#define pinGreenRGB 11 
+
+/* Variáveis para verificar o estado do Ar-Condicionado */
+
+
+/* Variáveis para o modo Tap the Remote Control */
+IRrecv irrecv(pinIRsensor); 
+decode_results resultado;
+
+/* Botões do controle remoto IR */
+#define ligarDesligarIRButton 0xFD00FF
+#define diminuirIRButton 0xFD10EF
+#define AumentarIRButton 0xFD50AF
+
+// Variáveis para verificar o estado do Ar-Condicionado //
+int estadoButtonArCondicionado;
+int estadoAnteriorButtonArCondicionado;
+int vezesPressionadas=0;
+int temperaturaControleRemoto = 23;
+
+/* Variáveis para o modo tap the device */
+int estadoButtonDiminuirAnterior,estadoButtonAumentarAnterior;
+// verificar estas variáveis //
+
+void setup () {
+ 
+ Serial.begin(9600);  
+ 
+ /* Configuração pino(s)- Estado Ar-Condicionado */
+ pinMode(pinButtonDiminuir,INPUT); // Correto
+ pinMode(pinButtonAumentar,INPUT); // Correto
+  
+ pinMode(pinPiezo, OUTPUT); // Correto  
+ 
+ /* Configuração pino(s)- Sincronização Bluetooth */ 
+ pinMode(pinButtonBluetooth,INPUT); // Correto
+ pinMode(pinLedProntoParaSincronizar, OUTPUT); // Correto
+ 
+ /* Configuração pino(s)- Temperatura do Ar-Condicionado */
+ pinMode(pinBlueRGB,  OUTPUT); // Correto
+ pinMode(pinRedRGB,   OUTPUT); // Correto
+ pinMode(pinGreenRGB, OUTPUT); // Correto
+  
+ // verificar: leituraAnteriorEstadoArCondicionado = leituraEstadoArCondicionado;
+ 
+ irrecv.enableIRIn(); // Inicia sensor IR // 
+ 
+ // pinos para testes // 
+ pinMode(pinLedEstadoArCondicionado,OUTPUT); // Correto 
+ pinMode(pinButtonEstadoArCondicionado,INPUT); // Correto   
+ 
+ estadoAnteriorButtonArCondicionado = digitalRead(pinButtonEstadoArCondicionado);  
+ 
+ estadoButtonDiminuirAnterior = digitalRead(pinButtonDiminuir);
+ estadoButtonAumentarAnterior = digitalRead(pinButtonAumentar); 
+}
+
+// Verificar: int estadoArCondicionadoIR=0;
+// Verificar: int leituraAnteriorButtonTemperatura=5000;
+int leituraButtonTemperatura=23;
+
+void loop () {
+ 
+   
+ estadoButtonArCondicionado = digitalRead(pinButtonEstadoArCondicionado);
+ 
+ 
+ if (estadoButtonArCondicionado && !estadoAnteriorButtonArCondicionado)
+ {
+   
+  vezesPressionadas++;  
+ 
+  if(vezesPressionadas % 2 != 0)
+  {
+   digitalWrite(pinLedEstadoArCondicionado,HIGH);
+ 
+   // Introdução do piezo ao ligar o ar-condicionado //
+   digitalWrite(pinPiezo,HIGH);
+   delay(500);
+   digitalWrite(pinPiezo,LOW); 
+  }
+  else
+  {
+   digitalWrite(pinLedEstadoArCondicionado,LOW);
+  }  
+   
+ }
+ 
+ if(irrecv.decode(&resultado))
+ {
+  if(resultado.value == ligarDesligarIRButton || resultado.value == 0xB2EEDF3D)
+  {
+   vezesPressionadas++; 
+ 
+   if(vezesPressionadas % 2 != 0)
+   {
+    digitalWrite(pinLedEstadoArCondicionado,HIGH);
+ 
+    // Introdução do piezo ao ligar o ar-condicionado //
+    digitalWrite(pinPiezo,HIGH);
+    delay(500);
+    digitalWrite(pinPiezo,LOW); 
+   }
+   else
+   {
+    digitalWrite(pinLedEstadoArCondicionado,LOW);
+   }
+   irrecv.resume(); 
+  }
+ }  
+ Serial.print("Vezes pressionadas o button de ligar/desligar: "); 
+ Serial.println(vezesPressionadas);
+  
+ estadoAnteriorButtonArCondicionado = digitalRead(pinButtonEstadoArCondicionado);
+ 
+ if(digitalRead(pinLedEstadoArCondicionado))
+ {
+  
+  if(irrecv.decode(&resultado))
+  {
+    
+   if(resultado.value == diminuirIRButton || resultado.value == 0x1E90961) // Se o botão diminuir do controle(seta para baixo) for pressionado 
+   {
+    leituraButtonTemperatura--;
+   }
+   if(resultado.value == AumentarIRButton || resultado.value == 0xCB3D6F7D || resultado.value == 0xCB3D6F7D) // Se o botão aumentar do controle(seta para cima)for pressionado 
+   {
+    leituraButtonTemperatura++;
+   }
+   irrecv.resume();  
+  }
+   
+  if(digitalRead(pinButtonDiminuir) && !estadoButtonDiminuirAnterior)
+  {
+   leituraButtonTemperatura--;
+  }
+  
+  if(digitalRead(pinButtonAumentar) && !estadoButtonAumentarAnterior)
+  {
+   leituraButtonTemperatura++; 
+  }  
+  
+  if (leituraButtonTemperatura > 32)
+  {
+   leituraButtonTemperatura= 32;
+  }
+  
+  if (leituraButtonTemperatura < 16)
+  {
+   leituraButtonTemperatura= 16;
+  } 
+ 
+ }
+  
+ estadoButtonDiminuirAnterior = digitalRead(pinButtonDiminuir);
+ estadoButtonAumentarAnterior = digitalRead(pinButtonAumentar); 
+ 
+ Serial.print("Temperatura do Ar-condicionado: ");
+ Serial.println(leituraButtonTemperatura); 
+ 
+ // verificação do botão que está sendo pressionado //
+  if(irrecv.decode(&resultado))
+  {
+   Serial.print("IR Code: ");
+   Serial.println(resultado.value, HEX);
+   irrecv.resume(); // Reinicia o sensor IR para receber o próximo valor //
+  }
+  
+ /* Começo do Ar-condicionado Ligado */ 
+ if(digitalRead(pinLedEstadoArCondicionado))
+ {
+  
+   
+   // Sincronização Bluetooth //
+  if(digitalRead(pinButtonBluetooth))
+  {
+   digitalWrite(pinLedProntoParaSincronizar,HIGH);
+  }
+  else
+  {  
+   digitalWrite(pinLedProntoParaSincronizar,LOW);
+  } // Fim: sincronização Bluetooth //
+  
+  
+  // Temperaturas do Ar-condicionado // 
+  if (leituraButtonTemperatura == 16) 
+  {
+   analogWrite(pinBlueRGB,255);
+   analogWrite(pinRedRGB,255);
+   analogWrite(pinGreenRGB,255);
+    
+  }  
+
+  else if (leituraButtonTemperatura >= 17 && leituraButtonTemperatura <= 22)
+  {
+   analogWrite(pinBlueRGB,255);
+   analogWrite(pinRedRGB,0);
+   analogWrite(pinGreenRGB,0);
+   
+  }
+
+  else if (leituraButtonTemperatura >= 23 && leituraButtonTemperatura <= 25)
+  {
+   analogWrite(pinBlueRGB,0);
+   analogWrite(pinRedRGB,0);
+   analogWrite(pinGreenRGB,255);
+   
+  }
+   
+  else if (leituraButtonTemperatura >= 26 && leituraButtonTemperatura <= 31)
+  {
+   analogWrite(pinBlueRGB,0);
+   analogWrite(pinRedRGB,255);
+   analogWrite(pinGreenRGB,158);   
+  } 
+  else
+  {
+   analogWrite(pinBlueRGB,0);
+   analogWrite(pinRedRGB,255);
+   analogWrite(pinGreenRGB,0);
+  }
+  
+  // Fim: Temperaturas do Ar-condicionado //   
+
+ } /* Término do Ar-Condicionado Ligado */
+ 
+ /* Começo do Ar-Condicionado Desligado */
+ else
+ {
+  analogWrite(pinBlueRGB,0);
+  analogWrite(pinRedRGB,0);
+  analogWrite(pinGreenRGB,0);
+  digitalWrite(pinLedProntoParaSincronizar,LOW);
+  leituraButtonTemperatura=23; 
+ } /* Término do Ar-Condicionado Desligado */ 
+  
+
+ 
+} 
