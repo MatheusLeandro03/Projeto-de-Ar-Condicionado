@@ -1,4 +1,4 @@
-# Projeto de Ar Condicionado
+# Projeto de Ar Condicionado Inteligente
 Projeto realizado na plataforma Tinkercad para simulação do funcionamento de um ar condicionado inteligente, com a utilização do arduino.
 # Links 
 * Link da aplicação no Tinkercad: https://www.tinkercad.com/things/1UQWWAZMtM6
